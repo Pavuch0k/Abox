@@ -72,13 +72,13 @@ jobs:
           ];
           
           // HTML шаблон
-          const htmlTemplate = (title, content, activePage) => `
+          const htmlTemplate = (title, content, activePage) => \`
           <!DOCTYPE html>
           <html lang="en">
           <head>
               <meta charset="UTF-8">
               <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <title>${title} - ABox Documentation</title>
+              <title>\${title} - ABox Documentation</title>
               <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.5.0/github-markdown.min.css">
               <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
               <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
@@ -190,14 +190,14 @@ jobs:
                           <div class="subtitle">Auth-in-a-Box Platform</div>
                       </div>
                       <ul class="nav-list">
-                          <li class="nav-item ${activePage === 'index' ? 'active' : ''}">
+                          <li class="nav-item \${activePage === 'index' ? 'active' : ''}">
                               <a href="index.html"><i class="fas fa-home"></i> Home</a>
                           </li>
-                          ${docs.map(doc => `
-                          <li class="nav-item ${activePage === doc.md.replace('.md', '') ? 'active' : ''}">
-                              <a href="${doc.md.replace('.md', '.html')}"><i class="fas fa-file-alt"></i> ${doc.title}</a>
+                          \${docs.map(doc => \`
+                          <li class="nav-item \${activePage === doc.md.replace('.md', '') ? 'active' : ''}">
+                              <a href="\${doc.md.replace('.md', '.html')}"><i class="fas fa-file-alt"></i> \${doc.title}</a>
                           </li>
-                          `).join('')}
+                          \`).join('')}
                           <li class="nav-item">
                               <a href="https://github.com/Pavuch0k/Abox"><i class="fab fa-github"></i> GitHub Repository</a>
                           </li>
@@ -206,10 +206,10 @@ jobs:
                   
                   <main class="content">
                       <div class="markdown-body">
-                          ${content}
+                          \${content}
                       </div>
                       <footer>
-                          <p>© 2025 ABox Project. Documentation generated on ${new Date().toLocaleDateString()}</p>
+                          <p>© 2025 ABox Project. Documentation generated on \${new Date().toLocaleDateString()}</p>
                           <p>Found an issue? <a href="https://github.com/Pavuch0k/Abox/issues">Report it on GitHub</a></p>
                       </footer>
                   </main>
@@ -230,10 +230,10 @@ jobs:
               </script>
           </body>
           </html>
-          `;
+          \`;
           
           // Главная страница
-          const mainContent = `
+          const mainContent = \`
           # Welcome to ABox Documentation
           
           ABox is a modular, microservice-based platform for rapid deployment of authentication and registration systems.
@@ -250,7 +250,7 @@ jobs:
           
           **Status**: In Development  
           **Version**: 0.1.0  
-          **Last Updated**: ${new Date().toLocaleDateString()}
+          **Last Updated**: \${new Date().toLocaleDateString()}
           
           ## Getting Started
           
@@ -262,7 +262,7 @@ jobs:
           
           - [GitHub Issues](https://github.com/Pavuch0k/Abox/issues)
           - Check the FAQ section (coming soon)
-          `;
+          \`;
           
           // Создаем главную страницу
           fs.writeFileSync('_site/index.html', htmlTemplate('Home', marked.parse(mainContent), 'index'));
@@ -277,9 +277,9 @@ jobs:
                       const fileName = doc.md.replace('.md', '.html');
                       fs.writeFileSync(path.join('_site', fileName), 
                           htmlTemplate(doc.title, htmlContent, doc.md.replace('.md', '')));
-                      console.log(\`Generated: \${fileName}\`);
+                      console.log('Generated: ' + fileName);
                   } else {
-                      console.log(\`Warning: \${mdPath} not found, creating placeholder\`);
+                      console.log('Warning: ' + mdPath + ' not found, creating placeholder');
                       const placeholder = \`
                       # \${doc.title}
                       
@@ -292,7 +292,7 @@ jobs:
                           htmlTemplate(doc.title, marked.parse(placeholder), doc.md.replace('.md', '')));
                   }
               } catch (error) {
-                  console.error(\`Error processing \${doc.md}:\`, error.message);
+                  console.error('Error processing ' + doc.md + ':', error.message);
               }
           });
           
@@ -304,7 +304,7 @@ jobs:
                       const src = path.join('docs', file);
                       const dest = path.join('_site', file);
                       fs.copyFileSync(src, dest);
-                      console.log(\`Copied: \${file}\`);
+                      console.log('Copied: ' + file);
                   }
               });
           }
