@@ -17,48 +17,28 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         
-      - name: Setup Node.js for Markdown processing
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           
-      - name: Create HTML site from Markdown
+      - name: Generate documentation from Markdown
         run: |
           mkdir -p _site
           
-          # Устанавливаем marked для конвертации Markdown в HTML
+          # Устанавливаем marked
           npm install marked
           
-          # Создаем скрипт для конвертации
+          # Создаем скрипт преобразования
           cat > convert.js << 'EOF'
           const fs = require('fs');
           const path = require('path');
           const { marked } = require('marked');
           
-          // Конфигурация marked
-          marked.setOptions({
-            gfm: true,
-            breaks: true,
-            mangle: false,
-            headerIds: false
-          });
-          
-          // Функция для чтения Markdown файла
-          function readMarkdownFile(filename) {
-            const filepath = path.join('docs', filename);
-            try {
-              if (fs.existsSync(filepath)) {
-                const content = fs.readFileSync(filepath, 'utf8');
-                return content || '# Document is empty\n\nAdd content to this document.';
-              }
-              return '# Document not found\n\nFile: ' + filename;
-            } catch (error) {
-              return '# Error reading document\n\n' + error.message;
-            }
-          }
+          marked.setOptions({ gfm: true, breaks: true });
           
           // HTML шаблон
-          function createHTML(title, content, pageId) {
+          function createPage(title, content, currentPage) {
             const pages = [
               { id: 'specification', title: 'Technical Specification' },
               { id: 'architecture', title: 'Architecture' },
@@ -67,213 +47,115 @@ jobs:
               { id: 'development', title: 'Development Guide' }
             ];
             
-            const navItems = pages.map(p => 
-              `<li><a href="${p.id}.html" ${p.id === pageId ? 'class="active"' : ''}>${p.title}</a></li>`
+            const nav = pages.map(p => 
+              '<li><a href="' + p.id + '.html"' + 
+              (p.id === currentPage ? ' class="active"' : '') + 
+              '>' + p.title + '</a></li>'
             ).join('');
             
             return `<!DOCTYPE html>
           <html>
           <head>
               <meta charset="UTF-8">
-              <title>${title} - ABox Documentation</title>
+              <title>${title} - ABox Docs</title>
               <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.5.0/github-markdown.min.css">
               <style>
-                  body { 
-                      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
-                      max-width: 1200px; 
-                      margin: 0 auto; 
-                      padding: 20px; 
-                      background: #f6f8fa;
-                  }
-                  .container {
-                      display: flex;
-                      gap: 30px;
-                  }
-                  .sidebar {
-                      width: 250px;
-                      flex-shrink: 0;
-                      background: white;
-                      padding: 25px;
-                      border-radius: 12px;
-                      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                  }
-                  .content {
-                      flex: 1;
-                      background: white;
-                      padding: 40px;
-                      border-radius: 12px;
-                      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                  }
-                  .sidebar h1 {
-                      color: #0366d6;
-                      margin-top: 0;
-                      font-size: 1.8rem;
-                  }
-                  .sidebar h2 {
-                      color: #24292e;
-                      font-size: 1.2rem;
-                      margin-top: 30px;
-                  }
-                  .sidebar ul {
-                      list-style: none;
-                      padding: 0;
-                      margin: 15px 0;
-                  }
-                  .sidebar li {
-                      margin: 8px 0;
-                  }
-                  .sidebar a {
-                      display: block;
-                      padding: 10px 15px;
-                      color: #24292e;
-                      text-decoration: none;
-                      border-radius: 6px;
-                      transition: all 0.2s;
-                  }
-                  .sidebar a:hover {
-                      background: #f6f8fa;
-                      color: #0366d6;
-                  }
-                  .sidebar a.active {
-                      background: #0366d6;
-                      color: white;
-                  }
-                  .markdown-body {
-                      background: transparent;
-                      padding: 0;
-                  }
-                  footer {
-                      margin-top: 40px;
-                      padding-top: 20px;
-                      border-top: 1px solid #e1e4e8;
-                      color: #6a737d;
-                      text-align: center;
-                      font-size: 0.9rem;
-                  }
-                  .mermaid {
-                      text-align: center;
-                      margin: 20px 0;
-                  }
+                  body { font-family: sans-serif; margin: 0; padding: 20px; background: #f6f8fa; }
+                  .container { max-width: 1200px; margin: 0 auto; display: flex; }
+                  .sidebar { width: 250px; background: white; padding: 20px; border-radius: 8px; margin-right: 20px; }
+                  .content { flex: 1; background: white; padding: 30px; border-radius: 8px; }
+                  .sidebar h2 { margin-top: 0; }
+                  .sidebar ul { list-style: none; padding: 0; }
+                  .sidebar li { margin-bottom: 10px; }
+                  .sidebar a { color: #0366d6; text-decoration: none; padding: 8px 12px; display: block; border-radius: 4px; }
+                  .sidebar a:hover { background: #f6f8fa; }
+                  .sidebar .active a { background: #0366d6; color: white; }
+                  footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e1e4e8; color: #6a737d; text-align: center; }
               </style>
           </head>
           <body>
               <div class="container">
                   <nav class="sidebar">
-                      <h1>ABox Docs</h1>
-                      <h2>Navigation</h2>
+                      <h2>ABox Documentation</h2>
                       <ul>
-                          <li><a href="index.html" ${pageId === 'home' ? 'class="active"' : ''}>Home</a></li>
-                          ${navItems}
-                      </ul>
-                      <h2>Links</h2>
-                      <ul>
-                          <li><a href="https://github.com/Pavuch0k/Abox" target="_blank">GitHub Repository</a></li>
-                          <li><a href="https://github.com/Pavuch0k/Abox/issues" target="_blank">Report Issues</a></li>
+                          <li ${currentPage === 'home' ? 'class="active"' : ''}>
+                              <a href="index.html">Home</a>
+                          </li>
+                          ${nav}
                       </ul>
                   </nav>
-                  <main class="content">
-                      <div class="markdown-body">
-                          ${content}
-                      </div>
+                  <main class="content markdown-body">
+                      ${content}
                       <footer>
-                          <p>Generated on ${new Date().toLocaleDateString()} | ABox Documentation</p>
+                          <p>Generated on ${new Date().toLocaleDateString()}</p>
                       </footer>
                   </main>
               </div>
-              <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
-              <script>
-                  mermaid.initialize({ startOnLoad: true, theme: 'default' });
-              </script>
           </body>
           </html>`;
           }
           
           // Главная страница
-          const homeContent = marked.parse(`
-# Welcome to ABox Documentation
-
-ABox is a modular, microservice-based platform for rapid deployment of authentication and registration systems.
-
-## 📚 Available Documentation
-
-- [Technical Specification](specification.html) - Project requirements and goals
-- [Architecture](architecture.html) - System design and components  
-- [API Documentation](api.html) - API endpoints and usage
-- [Deployment Guide](deployment.html) - How to deploy ABox
-- [Development Guide](development.html) - Guide for contributors
-
-## 🚀 Quick Start
-
-1. Check the [Technical Specification](specification.html) for project overview
-2. Read the [Architecture](architecture.html) to understand the system design
-3. Follow the [Deployment Guide](deployment.html) to set up ABox
-
-## 📊 Project Status
-
-**Status**: In Development  
-**Version**: 0.1.0  
-**Last Updated**: ${new Date().toLocaleDateString()}
-
----
-
-*This documentation is generated from Markdown files in the \`docs/\` folder.*
-          `);
+          const homeContent = marked.parse('# Welcome to ABox Documentation\n\n' +
+            'ABox is a modular platform for rapid deployment of authentication systems.\n\n' +
+            '## Available Documentation\n\n' +
+            '- [Technical Specification](specification.html) - Project requirements\n' +
+            '- [Architecture](architecture.html) - System design\n' +
+            '- [API Documentation](api.html) - API endpoints\n' +
+            '- [Deployment Guide](deployment.html) - How to deploy\n' +
+            '- [Development Guide](development.html) - Contributing\n\n' +
+            '## Project Status\n\n' +
+            '**Status**: In Development  \n' +
+            '**Version**: 0.1.0  \n' +
+            '**Last Updated**: ' + new Date().toLocaleDateString());
           
-          fs.writeFileSync('_site/index.html', createHTML('Home', homeContent, 'home'));
-          console.log('Generated: index.html');
+          fs.writeFileSync('_site/index.html', createPage('Home', homeContent, 'home'));
+          console.log('Generated index.html');
           
-          // Обрабатываем каждый Markdown файл
+          // Обрабатываем Markdown файлы
           const files = [
-            { md: 'SPECIFICATION.md', html: 'specification.html', id: 'specification', title: 'Technical Specification' },
-            { md: 'ARCHITECTURE.md', html: 'architecture.html', id: 'architecture', title: 'Architecture' },
-            { md: 'API.md', html: 'api.html', id: 'api', title: 'API Documentation' },
-            { md: 'DEPLOYMENT.md', html: 'deployment.html', id: 'deployment', title: 'Deployment Guide' },
-            { md: 'DEVELOPMENT.md', html: 'development.html', id: 'development', title: 'Development Guide' }
+            { md: 'SPECIFICATION.md', html: 'specification.html', id: 'specification' },
+            { md: 'ARCHITECTURE.md', html: 'architecture.html', id: 'architecture' },
+            { md: 'API.md', html: 'api.html', id: 'api' },
+            { md: 'DEPLOYMENT.md', html: 'deployment.html', id: 'deployment' },
+            { md: 'DEVELOPMENT.md', html: 'development.html', id: 'development' }
           ];
           
           files.forEach(file => {
-            const markdownContent = readMarkdownFile(file.md);
-            const htmlContent = marked.parse(markdownContent);
-            fs.writeFileSync(path.join('_site', file.html), createHTML(file.title, htmlContent, file.id));
-            console.log('Generated: ' + file.html + ' from ' + file.md);
+            const mdPath = path.join('docs', file.md);
+            let content = '# ' + file.id.charAt(0).toUpperCase() + file.id.slice(1) + '\n\nDocument is being prepared.';
             
-            // Логируем содержимое для отладки
-            console.log('--- Content preview for ' + file.md + ' ---');
-            console.log(markdownContent.substring(0, 200) + '...');
-            console.log('--- End preview ---\n');
+            if (fs.existsSync(mdPath)) {
+              try {
+                const md = fs.readFileSync(mdPath, 'utf8');
+                if (md.trim()) {
+                  content = marked.parse(md);
+                  console.log('Processed: ' + file.md + ' (' + md.length + ' chars)');
+                } else {
+                  console.log('File is empty: ' + file.md);
+                }
+              } catch (e) {
+                content = marked.parse('# Error\n\n' + e.message);
+              }
+            } else {
+              console.log('File not found: ' + file.md);
+            }
+            
+            const title = file.id.charAt(0).toUpperCase() + file.id.slice(1) + ' - ABox';
+            fs.writeFileSync(path.join('_site', file.html), createPage(title, content, file.id));
+            console.log('Generated: ' + file.html);
           });
           
-          // Создаем .nojekyll файл
+          // Создаем .nojekyll
           fs.writeFileSync('_site/.nojekyll', '');
-          console.log('Created .nojekyll file');
-          
-          // Логируем итоговую структуру
-          console.log('\n=== Final files in _site/ ===');
-          const siteFiles = fs.readdirSync('_site');
-          siteFiles.forEach(f => {
-            const stats = fs.statSync(path.join('_site', f));
-            console.log(f + ' (' + stats.size + ' bytes)');
-          });
           EOF
           
           # Запускаем конвертацию
           node convert.js
           
-          # Дополнительная проверка
-          echo "=== Checking generated HTML files ==="
+          # Проверяем результат
+          echo "=== Generated files ==="
           ls -la _site/*.html
-          echo ""
-          echo "=== First few lines of specification.html ==="
-          head -20 _site/specification.html
-          
-      - name: Debug - Show what was generated
-        run: |
-          echo "=== Files in _site/ ==="
-          find _site -type f -name "*.html" | xargs wc -l
-          echo ""
-          echo "=== Checking if Markdown content is included ==="
-          grep -n "Technical Specification" _site/specification.html || echo "Content not found in specification.html"
-          grep -n "Architecture" _site/architecture.html || echo "Content not found in architecture.html"
           
       - name: Setup Pages
         uses: actions/configure-pages@v5
