@@ -3,7 +3,6 @@ name: Deploy Docs to GitHub Pages
 on:
   push:
     branches: ["main"]
-    paths: ["docs/**", "!docs/index.html"]
   workflow_dispatch:
 
 permissions:
@@ -11,68 +10,338 @@ permissions:
   pages: write
   id-token: write
 
+# Allow only one concurrent deployment
+concurrency:
+  group: "pages"
+  cancel-inprogress: true
+
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
-        
-      - name: Generate HTML from Markdown
+        with:
+          fetch-depth: 0
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          
+      - name: Debug - List files before processing
         run: |
-       
-          echo '<!DOCTYPE html>
-          <html>
+          echo "=== Repository structure ==="
+          find . -type f -name "*.md" | head -20
+          echo "=== Docs folder ==="
+          ls -la docs/ || echo "No docs folder found"
+          
+      - name: Install marked (Markdown parser)
+        run: npm install marked
+          
+      - name: Generate HTML documentation
+        run: |
+          # Создаем папку для сборки
+          mkdir -p _site
+          
+          # Функция для преобразования Markdown в HTML
+          cat > convert.js << 'EOF'
+          const fs = require('fs');
+          const path = require('path');
+          const { marked } = require('marked');
+          
+          // Настройка marked для поддержки Mermaid
+          marked.setOptions({
+            gfm: true,
+            breaks: true,
+            mangle: false,
+            headerIds: false
+          });
+          
+          // Список документов
+          const docs = [
+            { md: 'SPECIFICATION.md', title: 'Technical Specification' },
+            { md: 'ARCHITECTURE.md', title: 'Architecture' },
+            { md: 'API.md', title: 'API Documentation' },
+            { md: 'DEPLOYMENT.md', title: 'Deployment Guide' },
+            { md: 'DEVELOPMENT.md', title: 'Development Guide' }
+          ];
+          
+          // HTML шаблон
+          const htmlTemplate = (title, content, activePage) => `
+          <!DOCTYPE html>
+          <html lang="en">
           <head>
               <meta charset="UTF-8">
-              <title>ABox Documentation</title>
-              <meta name="viewport" content="width=device-width, initial-scale=1">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>${title} - ABox Documentation</title>
               <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.5.0/github-markdown.min.css">
+              <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+              <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
               <style>
-                  .markdown-body { box-sizing: border-box; min-width: 200px; max-width: 980px; margin: 0 auto; padding: 45px; }
-                  @media (max-width: 767px) { .markdown-body { padding: 15px; } }
-                  .nav { background: #f6f8fa; padding: 20px; margin-bottom: 30px; border-radius: 6px; }
-                  .nav a { margin-right: 15px; color: #0366d6; text-decoration: none; }
-                  .nav a:hover { text-decoration: underline; }
+                  * { margin: 0; padding: 0; box-sizing: border-box; }
+                  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; line-height: 1.6; }
+                  
+                  .container { 
+                      display: flex; 
+                      min-height: 100vh;
+                  }
+                  
+                  .sidebar {
+                      width: 280px;
+                      background: #f8f9fa;
+                      border-right: 1px solid #e1e4e8;
+                      padding: 20px;
+                      position: fixed;
+                      height: 100vh;
+                      overflow-y: auto;
+                  }
+                  
+                  .sidebar-header {
+                      margin-bottom: 30px;
+                      padding-bottom: 15px;
+                      border-bottom: 1px solid #e1e4e8;
+                  }
+                  
+                  .sidebar-header h1 {
+                      font-size: 1.5rem;
+                      color: #24292e;
+                  }
+                  
+                  .sidebar-header .subtitle {
+                      color: #6a737d;
+                      font-size: 0.9rem;
+                      margin-top: 5px;
+                  }
+                  
+                  .nav-list {
+                      list-style: none;
+                  }
+                  
+                  .nav-item {
+                      margin-bottom: 8px;
+                  }
+                  
+                  .nav-item a {
+                      display: block;
+                      padding: 10px 15px;
+                      color: #24292e;
+                      text-decoration: none;
+                      border-radius: 6px;
+                      transition: background-color 0.2s;
+                  }
+                  
+                  .nav-item a:hover {
+                      background-color: #e1e4e8;
+                  }
+                  
+                  .nav-item.active a {
+                      background-color: #0366d6;
+                      color: white;
+                  }
+                  
+                  .content {
+                      flex: 1;
+                      margin-left: 280px;
+                      padding: 40px;
+                      max-width: 1200px;
+                  }
+                  
+                  .markdown-body {
+                      background-color: white;
+                      padding: 40px;
+                      border-radius: 6px;
+                      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                  }
+                  
+                  @media (max-width: 768px) {
+                      .container { flex-direction: column; }
+                      .sidebar { 
+                          width: 100%; 
+                          height: auto;
+                          position: static;
+                      }
+                      .content { margin-left: 0; }
+                  }
+                  
+                  footer {
+                      margin-top: 40px;
+                      padding-top: 20px;
+                      border-top: 1px solid #e1e4e8;
+                      color: #6a737d;
+                      font-size: 0.9rem;
+                  }
+                  
+                  .mermaid {
+                      text-align: center;
+                      margin: 20px 0;
+                  }
               </style>
           </head>
           <body>
-              <div class="markdown-body">
-                  <div class="nav">
-                      <a href="index.html">Home</a>
-                      <a href="SPECIFICATION.html">Specification</a>
-                      <a href="ARCHITECTURE.html">Architecture</a>
-                      <a href="API.html">API</a>
-                      <a href="DEPLOYMENT.html">Deployment</a>
-                      <a href="DEVELOPMENT.html">Development</a>
-                  </div>
-                  <div id="content"></div>
+              <div class="container">
+                  <nav class="sidebar">
+                      <div class="sidebar-header">
+                          <h1><i class="fas fa-cube"></i> ABox</h1>
+                          <div class="subtitle">Auth-in-a-Box Platform</div>
+                      </div>
+                      <ul class="nav-list">
+                          <li class="nav-item ${activePage === 'index' ? 'active' : ''}">
+                              <a href="index.html"><i class="fas fa-home"></i> Home</a>
+                          </li>
+                          ${docs.map(doc => `
+                          <li class="nav-item ${activePage === doc.md.replace('.md', '') ? 'active' : ''}">
+                              <a href="${doc.md.replace('.md', '.html')}"><i class="fas fa-file-alt"></i> ${doc.title}</a>
+                          </li>
+                          `).join('')}
+                          <li class="nav-item">
+                              <a href="https://github.com/Pavuch0k/Abox"><i class="fab fa-github"></i> GitHub Repository</a>
+                          </li>
+                      </ul>
+                  </nav>
+                  
+                  <main class="content">
+                      <div class="markdown-body">
+                          ${content}
+                      </div>
+                      <footer>
+                          <p>© 2025 ABox Project. Documentation generated on ${new Date().toLocaleDateString()}</p>
+                          <p>Found an issue? <a href="https://github.com/Pavuch0k/Abox/issues">Report it on GitHub</a></p>
+                      </footer>
+                  </main>
               </div>
+              
               <script>
-                  fetch(window.location.pathname.replace(".html", ".md"))
-                      .then(r => r.text())
-                      .then(md => {
-                          document.getElementById("content").innerHTML = marked.parse(md);
-                      });
+                  // Инициализация Mermaid
+                  mermaid.initialize({ 
+                      startOnLoad: true,
+                      theme: 'default',
+                      securityLevel: 'loose'
+                  });
+                  
+                  // Перерисовка Mermaid диаграмм после загрузки контента
+                  document.addEventListener('DOMContentLoaded', function() {
+                      mermaid.init();
+                  });
               </script>
-              <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
           </body>
-          </html>' > docs/index.html
+          </html>
+          `;
           
-          # Копируем index.html для каждого документа
-          cp docs/index.html docs/SPECIFICATION.html
-          cp docs/index.html docs/ARCHITECTURE.html
-          cp docs/index.html docs/API.html
-          cp docs/index.html docs/DEPLOYMENT.html
-          cp docs/index.html docs/DEVELOPMENT.html
-        
+          // Главная страница
+          const mainContent = `
+          # Welcome to ABox Documentation
+          
+          ABox is a modular, microservice-based platform for rapid deployment of authentication and registration systems.
+          
+          ## Quick Links
+          
+          - [Technical Specification](SPECIFICATION.html) - Project goals and requirements
+          - [Architecture](ARCHITECTURE.html) - System design and components
+          - [API Documentation](API.html) - API endpoints and usage
+          - [Deployment Guide](DEPLOYMENT.html) - How to deploy ABox
+          - [Development Guide](DEVELOPMENT.html) - Guide for contributors
+          
+          ## Project Status
+          
+          **Status**: In Development  
+          **Version**: 0.1.0  
+          **Last Updated**: ${new Date().toLocaleDateString()}
+          
+          ## Getting Started
+          
+          1. Clone the repository
+          2. Check the deployment guide for setup instructions
+          3. Explore the API documentation
+          
+          ## Need Help?
+          
+          - [GitHub Issues](https://github.com/Pavuch0k/Abox/issues)
+          - Check the FAQ section (coming soon)
+          `;
+          
+          // Создаем главную страницу
+          fs.writeFileSync('_site/index.html', htmlTemplate('Home', marked.parse(mainContent), 'index'));
+          
+          // Создаем HTML для каждого документа
+          docs.forEach(doc => {
+              try {
+                  const mdPath = path.join('docs', doc.md);
+                  if (fs.existsSync(mdPath)) {
+                      const mdContent = fs.readFileSync(mdPath, 'utf8');
+                      const htmlContent = marked.parse(mdContent);
+                      const fileName = doc.md.replace('.md', '.html');
+                      fs.writeFileSync(path.join('_site', fileName), 
+                          htmlTemplate(doc.title, htmlContent, doc.md.replace('.md', '')));
+                      console.log(`Generated: ${fileName}`);
+                  } else {
+                      console.log(`Warning: ${mdPath} not found, creating placeholder`);
+                      const placeholder = `
+                      # ${doc.title}
+                      
+                      This document is not yet available. Please check back soon.
+                      
+                      [Return to Home](index.html)
+                      `;
+                      const fileName = doc.md.replace('.md', '.html');
+                      fs.writeFileSync(path.join('_site', fileName), 
+                          htmlTemplate(doc.title, marked.parse(placeholder), doc.md.replace('.md', '')));
+                  }
+              } catch (error) {
+                  console.error(`Error processing ${doc.md}:`, error.message);
+              }
+          });
+          
+          // Копируем существующие файлы из docs (кроме .md)
+          if (fs.existsSync('docs')) {
+              const files = fs.readdirSync('docs');
+              files.forEach(file => {
+                  if (!file.endsWith('.md')) {
+                      const src = path.join('docs', file);
+                      const dest = path.join('_site', file);
+                      fs.copyFileSync(src, dest);
+                      console.log(`Copied: ${file}`);
+                  }
+              });
+          }
+          
+          // Создаем .nojekyll файл
+          fs.writeFileSync('_site/.nojekyll', '');
+          console.log('Created .nojekyll file');
+          
+          // Создаем CNAME если нужен (для кастомного домена)
+          if (process.env.CUSTOM_DOMAIN) {
+              fs.writeFileSync('_site/CNAME', process.env.CUSTOM_DOMAIN);
+          }
+          EOF
+          
+          # Запускаем конвертацию
+          node convert.js
+          
+          # Проверяем результат
+          echo "=== Generated files in _site/ ==="
+          ls -la _site/
+          echo "=== First 10 lines of index.html ==="
+          head -20 _site/index.html
+          
+      - name: Debug - List generated files
+        run: |
+          echo "=== Final site structure ==="
+          find _site -type f | sort
+          echo "=== File sizes ==="
+          du -sh _site/*
+          
       - name: Setup Pages
         uses: actions/configure-pages@v5
         
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'docs/'
+          path: '_site/'
           
       - name: Deploy to GitHub Pages
         id: deployment
