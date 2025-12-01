@@ -13,7 +13,7 @@ permissions:
 # Allow only one concurrent deployment
 concurrency:
   group: "pages"
-  cancel-inprogress: true
+  cancel-in-progress: true
 
 jobs:
   build-and-deploy:
@@ -38,9 +38,9 @@ jobs:
           echo "=== Repository structure ==="
           find . -type f -name "*.md" | head -20
           echo "=== Docs folder ==="
-          ls -la docs/ || echo "No docs folder found"
+          ls -la docs/ 2>/dev/null || echo "No docs folder found"
           
-      - name: Install marked (Markdown parser)
+      - name: Install dependencies
         run: npm install marked
           
       - name: Generate HTML documentation
@@ -277,22 +277,22 @@ jobs:
                       const fileName = doc.md.replace('.md', '.html');
                       fs.writeFileSync(path.join('_site', fileName), 
                           htmlTemplate(doc.title, htmlContent, doc.md.replace('.md', '')));
-                      console.log(`Generated: ${fileName}`);
+                      console.log(\`Generated: \${fileName}\`);
                   } else {
-                      console.log(`Warning: ${mdPath} not found, creating placeholder`);
-                      const placeholder = `
-                      # ${doc.title}
+                      console.log(\`Warning: \${mdPath} not found, creating placeholder\`);
+                      const placeholder = \`
+                      # \${doc.title}
                       
                       This document is not yet available. Please check back soon.
                       
                       [Return to Home](index.html)
-                      `;
+                      \`;
                       const fileName = doc.md.replace('.md', '.html');
                       fs.writeFileSync(path.join('_site', fileName), 
                           htmlTemplate(doc.title, marked.parse(placeholder), doc.md.replace('.md', '')));
                   }
               } catch (error) {
-                  console.error(`Error processing ${doc.md}:`, error.message);
+                  console.error(\`Error processing \${doc.md}:\`, error.message);
               }
           });
           
@@ -304,7 +304,7 @@ jobs:
                       const src = path.join('docs', file);
                       const dest = path.join('_site', file);
                       fs.copyFileSync(src, dest);
-                      console.log(`Copied: ${file}`);
+                      console.log(\`Copied: \${file}\`);
                   }
               });
           }
@@ -313,10 +313,6 @@ jobs:
           fs.writeFileSync('_site/.nojekyll', '');
           console.log('Created .nojekyll file');
           
-          // Создаем CNAME если нужен (для кастомного домена)
-          if (process.env.CUSTOM_DOMAIN) {
-              fs.writeFileSync('_site/CNAME', process.env.CUSTOM_DOMAIN);
-          }
           EOF
           
           # Запускаем конвертацию
@@ -325,8 +321,6 @@ jobs:
           # Проверяем результат
           echo "=== Generated files in _site/ ==="
           ls -la _site/
-          echo "=== First 10 lines of index.html ==="
-          head -20 _site/index.html
           
       - name: Debug - List generated files
         run: |
