@@ -1,43 +1,79 @@
-# Simple workflow for deploying static content to GitHub Pages
-name: Deploy static content to Pages
+name: Deploy Docs to GitHub Pages
 
 on:
-  # Runs on pushes targeting the default branch
   push:
     branches: ["main"]
-
-  # Allows you to run this workflow manually from the Actions tab
+    paths: ["docs/**", "!docs/index.html"]
   workflow_dispatch:
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
-# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
-
 jobs:
-  # Single deploy job since we're just deploying
   deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        
+      - name: Generate HTML from Markdown
+        run: |
+       
+          echo '<!DOCTYPE html>
+          <html>
+          <head>
+              <meta charset="UTF-8">
+              <title>ABox Documentation</title>
+              <meta name="viewport" content="width=device-width, initial-scale=1">
+              <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.5.0/github-markdown.min.css">
+              <style>
+                  .markdown-body { box-sizing: border-box; min-width: 200px; max-width: 980px; margin: 0 auto; padding: 45px; }
+                  @media (max-width: 767px) { .markdown-body { padding: 15px; } }
+                  .nav { background: #f6f8fa; padding: 20px; margin-bottom: 30px; border-radius: 6px; }
+                  .nav a { margin-right: 15px; color: #0366d6; text-decoration: none; }
+                  .nav a:hover { text-decoration: underline; }
+              </style>
+          </head>
+          <body>
+              <div class="markdown-body">
+                  <div class="nav">
+                      <a href="index.html">Home</a>
+                      <a href="SPECIFICATION.html">Specification</a>
+                      <a href="ARCHITECTURE.html">Architecture</a>
+                      <a href="API.html">API</a>
+                      <a href="DEPLOYMENT.html">Deployment</a>
+                      <a href="DEVELOPMENT.html">Development</a>
+                  </div>
+                  <div id="content"></div>
+              </div>
+              <script>
+                  fetch(window.location.pathname.replace(".html", ".md"))
+                      .then(r => r.text())
+                      .then(md => {
+                          document.getElementById("content").innerHTML = marked.parse(md);
+                      });
+              </script>
+              <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+          </body>
+          </html>' > docs/index.html
+          
+          # Копируем index.html для каждого документа
+          cp docs/index.html docs/SPECIFICATION.html
+          cp docs/index.html docs/ARCHITECTURE.html
+          cp docs/index.html docs/API.html
+          cp docs/index.html docs/DEPLOYMENT.html
+          cp docs/index.html docs/DEVELOPMENT.html
+        
       - name: Setup Pages
         uses: actions/configure-pages@v5
+        
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload entire repository
-          path: '.'
+          path: 'docs/'
+          
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
