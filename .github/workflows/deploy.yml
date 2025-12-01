@@ -1,0 +1,111 @@
+name: Deploy Docs to GitHub Pages
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Create simple HTML site
+        run: |
+          mkdir -p _site
+          
+          # Создаем главную страницу
+          cat > _site/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <meta charset="UTF-8">
+              <title>ABox Documentation</title>
+              <style>
+                  body { font-family: sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; }
+                  nav { background: #f6f8fa; padding: 20px; border-radius: 8px; margin-bottom: 30px; }
+                  h1 { color: #0366d6; }
+                  ul { list-style: none; padding: 0; }
+                  li { margin: 10px 0; }
+                  a { color: #0366d6; text-decoration: none; }
+                  a:hover { text-decoration: underline; }
+              </style>
+          </head>
+          <body>
+              <h1>ABox Documentation</h1>
+              <nav>
+                  <h2>Available Documents</h2>
+                  <ul>
+                      <li><a href="index.html">Home</a></li>
+                      <li><a href="specification.html">Technical Specification</a></li>
+                      <li><a href="architecture.html">Architecture</a></li>
+                      <li><a href="api.html">API Documentation</a></li>
+                      <li><a href="deployment.html">Deployment Guide</a></li>
+                      <li><a href="development.html">Development Guide</a></li>
+                  </ul>
+              </nav>
+              <h2>Welcome to ABox Documentation</h2>
+              <p>Select a document from the navigation above.</p>
+          </body>
+          </html>
+          EOF
+          
+          # Создаем заглушки для остальных страниц
+          for page in specification architecture api deployment development; do
+            cat > _site/${page}.html << EOF
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <meta charset="UTF-8">
+              <title>${page^} - ABox Documentation</title>
+              <style>
+                  body { font-family: sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; }
+                  nav { background: #f6f8fa; padding: 20px; border-radius: 8px; margin-bottom: 30px; }
+                  h1 { color: #0366d6; }
+                  ul { list-style: none; padding: 0; }
+                  li { margin: 10px 0; }
+                  a { color: #0366d6; text-decoration: none; }
+                  a:hover { text-decoration: underline; }
+              </style>
+          </head>
+          <body>
+              <h1>ABox - ${page^}</h1>
+              <nav>
+                  <ul>
+                      <li><a href="index.html">Home</a></li>
+                      <li><a href="specification.html">Technical Specification</a></li>
+                      <li><a href="architecture.html">Architecture</a></li>
+                      <li><a href="api.html">API Documentation</a></li>
+                      <li><a href="deployment.html">Deployment Guide</a></li>
+                      <li><a href="development.html">Development Guide</a></li>
+                  </ul>
+              </nav>
+              <h2>${page^} Document</h2>
+              <p>This document is being prepared.</p>
+              <p>Check back soon for full documentation.</p>
+          </body>
+          </html>
+          EOF
+          done
+          
+          # Создаем .nojekyll
+          touch _site/.nojekyll
+          
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+        
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '_site/'
+          
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
