@@ -1,8 +1,8 @@
 # ABox — Technical Specification
 
 ## Авторы  
-- Никита (начальный автор, архитектор)  
-- … (друг, Java-разработчик)  
+- [Pavuch0k](https://github.com/Pavuch0k) (начальный автор, архитектор)  
+- [m1keeeD](https://github.com/m1keeeD) (Java-разработчик)  
 
 ## Дата создания / версия  
 - Версия: 0.1-draft  

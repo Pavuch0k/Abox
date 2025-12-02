@@ -4,3 +4,7 @@
 
 [![Лицензия: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Статус: Разработка](https://img.shields.io/badge/Статус-В_разработке-yellow.svg)]()
+
+## 📚 Документация
+
+Полная документация проекта доступна по адресу: [https://pavuch0k.github.io/Abox/index.html](https://pavuch0k.github.io/Abox/index.html)

@@ -40,11 +40,11 @@ jobs:
           // HTML шаблон
           function createPage(title, content, currentPage) {
             const pages = [
-              { id: 'specification', title: 'Technical Specification' },
-              { id: 'architecture', title: 'Architecture' },
-              { id: 'api', title: 'API Documentation' },
-              { id: 'deployment', title: 'Deployment Guide' },
-              { id: 'development', title: 'Development Guide' }
+              { id: 'specification', title: 'Техническая спецификация' },
+              { id: 'architecture', title: 'Архитектура' },
+              { id: 'api', title: 'Документация API' },
+              { id: 'deployment', title: 'Руководство по развертыванию' },
+              { id: 'development', title: 'Руководство по разработке' }
             ];
             
             const nav = pages.map(p => 
@@ -254,10 +254,10 @@ jobs:
           <body>
               <div class="container">
                   <nav class="sidebar">
-                      <h2>ABox Documentation</h2>
+                      <h2>Документация ABox</h2>
                       <ul>
                           <li ${currentPage === 'home' ? 'class="active"' : ''}>
-                              <a href="index.html">Home</a>
+                              <a href="index.html">Главная</a>
                           </li>
                           ${nav}
                       </ul>
@@ -274,20 +274,20 @@ jobs:
           }
           
           // Главная страница
-          const homeContent = marked.parse('# Welcome to ABox Documentation\n\n' +
-            'ABox is a modular platform for rapid deployment of authentication systems.\n\n' +
-            '## Available Documentation\n\n' +
-            '- [Technical Specification](specification.html) - Project requirements\n' +
-            '- [Architecture](architecture.html) - System design\n' +
-            '- [API Documentation](api.html) - API endpoints\n' +
-            '- [Deployment Guide](deployment.html) - How to deploy\n' +
-            '- [Development Guide](development.html) - Contributing\n\n' +
-            '## Project Status\n\n' +
-            '**Status**: In Development  \n' +
-            '**Version**: 0.1.0  \n' +
-            '**Last Updated**: ' + new Date().toLocaleDateString());
+          const homeContent = marked.parse('# Добро пожаловать в документацию ABox\n\n' +
+            'ABox — это модульная платформа для быстрого развертывания систем аутентификации.\n\n' +
+            '## Доступная документация\n\n' +
+            '- [Техническая спецификация](specification.html) - Требования проекта\n' +
+            '- [Архитектура](architecture.html) - Дизайн системы\n' +
+            '- [Документация API](api.html) - API эндпоинты\n' +
+            '- [Руководство по развертыванию](deployment.html) - Как развернуть\n' +
+            '- [Руководство по разработке](development.html) - Участие в разработке\n\n' +
+            '## Статус проекта\n\n' +
+            '**Статус**: В разработке  \n' +
+            '**Версия**: 0.1.0  \n' +
+            '**Последнее обновление**: ' + new Date().toLocaleDateString('ru-RU'));
           
-          fs.writeFileSync('_site/index.html', createPage('Home', homeContent, 'home'));
+          fs.writeFileSync('_site/index.html', createPage('Главная', homeContent, 'home'));
           console.log('Generated index.html');
           
           // Обрабатываем Markdown файлы
